@@ -1,8 +1,7 @@
-
 // src/window.rs
 use crate::data::Wawa;
-use eframe::{egui, App};
 use break_infinity::{self, Decimal};
+use eframe::{egui, App};
 
 impl Wawa {
     pub fn new() -> Self {
@@ -16,41 +15,42 @@ impl Wawa {
     pub fn increment_wawas_clicked(&mut self) {
         self.wawas_clicked += Decimal::new(1.0);
     }
-
 }
 
 impl App for Wawa {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui_extras::install_image_loaders(ctx);
 
-        egui::SidePanel::left("filler").min_width(500.0).show(ctx, |_ui| {});
+        egui::SidePanel::left("filler")
+            .min_width(500.0)
+            .show(ctx, |_ui| {});
 
-        let screen_bounds = egui::vec2(500.0,500.0);
-        let wawa_size = egui::vec2(25.0,25.0);
-        egui::Window::new("wawa containment chamber")
+        let screen_bounds = egui::vec2(500.0, 500.0);
+        let wawa_size = egui::vec2(25.0, 25.0);
+        let t = egui::Window::new("wawa containment chamber")
             .fixed_size(screen_bounds)
-            .fixed_pos(egui::pos2(1920.0/2.0,1080.0/2.0))
             .collapsible(false)
             .show(ctx, |ui| {
-
                 let winpos = ctx.screen_rect().min;
                 let distance = 1.0;
-                let accessible_boundsx = screen_bounds.x-(screen_bounds.x-wawa_size.x)..screen_bounds.x-wawa_size.x;
-                let accessible_boundsy = screen_bounds.y-(screen_bounds.y-wawa_size.y)..screen_bounds.y-wawa_size.y;
-                let velocity_range =0.0..10.0;
+                let accessible_boundsx = screen_bounds.x - (screen_bounds.x - wawa_size.x)
+                    ..screen_bounds.x - wawa_size.x;
+                let accessible_boundsy = screen_bounds.y - (screen_bounds.y - wawa_size.y)
+                    ..screen_bounds.y - wawa_size.y;
+                let velocity_range = 0.0..10.0;
 
                 if self.wawapos.len() < self.max_wawas {
                     let randx = rand::random_range(accessible_boundsx.clone()) + winpos.x;
                     let randy = rand::random_range(accessible_boundsy.clone()) + winpos.y;
                     let velx = rand::random_range(velocity_range.clone());
                     let vely = rand::random_range(velocity_range.clone());
-                    self.wawapos.push(((randx,randy),(velx,vely)));
+                    self.wawapos.push(((randx, randy), (velx, vely)));
                 }
 
                 // check if any click is active
                 if ctx.input(|i| i.pointer.any_click()) {
                     if let Some(pos) = ctx.pointer_latest_pos() {
-                        self.click_pos = Some((pos.x,pos.y)); // store the position of the click
+                        self.click_pos = Some((pos.x, pos.y)); // store the position of the click
                     }
                 }
 
@@ -58,7 +58,7 @@ impl App for Wawa {
                 let mut ind_to_rmv: Vec<usize> = Vec::new();
 
                 // adjusting positions based on the window position
-                for (i, ((x, y), (vx,vy))) in self.wawapos.iter_mut().enumerate() {
+                for (i, ((x, y), (vx, vy))) in self.wawapos.iter_mut().enumerate() {
                     // Update x and y positions
                     let mut new_x = (*x + winpos.x + distance * *vx).clamp(
                         winpos.x + accessible_boundsx.start,
@@ -69,40 +69,70 @@ impl App for Wawa {
                         winpos.y + accessible_boundsy.end,
                     );
 
-                    if new_x < accessible_boundsx.start {new_x = accessible_boundsx.start; *vx = -*vx;}
-                    if new_y < accessible_boundsx.start {new_y = accessible_boundsx.start; *vy = -*vy;} 
-                    if new_x > accessible_boundsx.end {new_x = accessible_boundsx.end; *vx = -*vx;}
-                    if new_y > accessible_boundsy.end {new_y = accessible_boundsy.end; *vy = -*vy;} // reflect the wawa
+                    if new_x <= accessible_boundsx.start {
+                        new_x = accessible_boundsx.start;
+                        *vx = -*vx;
+                    }
+                    if new_y <= accessible_boundsx.start {
+                        new_y = accessible_boundsx.start;
+                        *vy = -*vy;
+                    }
+                    if new_x >= accessible_boundsx.end {
+                        new_x = accessible_boundsx.end;
+                        *vx = -*vx;
+                    }
+                    if new_y >= accessible_boundsy.end {
+                        new_y = accessible_boundsy.end;
+                        *vy = -*vy;
+                    } // reflect the wawa
                     *x = new_x;
                     *y = new_y;
 
                     if let Some((x1, y1)) = self.click_pos {
                         // see if the clicked point is close enough to (x, y)
-                        if (x1 - *x).abs() <= wawa_size.x/2.0 && (y1 - *y).abs() <= wawa_size.y/2.0 {
+                        if (x1 - *x).abs() <= wawa_size.x / 2.0
+                            && (y1 - *y).abs() <= wawa_size.y / 2.0
+                        {
                             eprint!("wawa clicked");
-                            ind_to_rmv.push(i);  // Collect the index for removal
-                            self.cash += Decimal::new(1.0); 
+                            ind_to_rmv.push(i); // Collect the index for removal
+                            self.cash += Decimal::new(1.0);
                             self.wawas_clicked += Decimal::new(1.0);
                         }
                     }
                 }
 
-                for ((x,y),(_vx,_vy)) in self.wawapos.clone() {
-                    let rect = egui::Rect::from_pos(egui::Pos2::new(x, y));
-                    ui.put(rect,egui::Image::new(egui::include_image!("../assets/icon.png"))
-                    .fit_to_exact_size(wawa_size));
+                // for ((x, y), (_vx, _vy)) in self.wawapos.clone() {
+                //     let rect = egui::Rect::from_pos(egui::Pos2::new(x, y));
+                //     egui::Image::new(egui::include_image!("../assets/icon.png"))
+                //         .fit_to_exact_size(wawa_size)
+                //         .paint_at(ui, rect);
+                // }
+                for ((x, y), (_vx, _vy)) in self.wawapos.clone() {
+                    let rect = egui::Rect::from_two_pos(
+                        egui::Pos2::new(x, y),
+                        egui::Pos2::new(x + wawa_size.x, y + wawa_size.y),
+                    );
+                    egui::Image::new(egui::include_image!("../assets/icon.png"))
+                        .fit_to_exact_size(wawa_size)
+                        .paint_at(ui, rect);
                 }
-        
+                let rect = egui::Rect::from([[50.0, 50.0].into(), [100.0, 100.0].into()]);
+                egui::Image::new(egui::include_image!("../assets/icon.png"))
+                    .fit_to_exact_size(wawa_size)
+                    .paint_at(ui, rect);
+
                 // Step 4: Remove clicked images - iterate in reverse to avoid issues with shifting indices
                 for index in ind_to_rmv.iter().rev() {
                     self.wawapos.remove(*index);
                 }
-                ui.set_height(screen_bounds.x);
-                ui.set_width(screen_bounds.y);
+                ui.allocate_space(ui.available_size());
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        if let Some(window) = t {
+            println!("Window Position: {}", window.response.rect);
+        }
 
+        egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
                 ui.label(format!("cash: {}", self.cash));
                 ui.label(format!("max wawas: {}", self.max_wawas));
@@ -127,4 +157,3 @@ impl App for Wawa {
         });
     }
 }
-
